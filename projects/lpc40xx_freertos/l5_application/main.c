@@ -14,11 +14,28 @@ static void create_uart_task(void);
 static void blink_task(void *params);
 static void uart_task(void *params);
 
-int main(void) {
-  create_blinky_tasks();
-  create_uart_task();
+// Assignment : Multiple Tasks
+static void task_one(void *task_param) {
+  while (true) {
+    fprintf(stderr, "AAAAAAAAAAAA");
+    vTaskDelay(100);
+  }
+}
 
-  puts("Starting RTOS");
+static void task_two(void *task_param) {
+  while (true) {
+    fprintf(stderr, "bbbbbbbbbbbb");
+    vTaskDelay(100);
+  }
+}
+int main(void) {
+  //  create_blinky_tasks();
+  //  create_uart_task();
+  // puts("Starting RTOS");
+
+  xTaskCreate(task_one, "task1", 1024, NULL, PRIORITY_HIGH, NULL);
+  xTaskCreate(task_two, "task2", 1024, NULL, PRIORITY_LOW, NULL);
+
   vTaskStartScheduler(); // This function never returns unless RTOS scheduler runs out of memory and fails
 
   return 0;
