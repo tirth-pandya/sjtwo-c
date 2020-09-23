@@ -6,6 +6,9 @@
 #include "function_types.h"
 #include "lpc40xx.h"
 
+#ifdef LAB_03_P0
+void gpio_interrupt(void); // Lab 3.0
+#endif
 /**
  * _estack symbol is actually a pointer to the start of the stack memory (provided by the linker script).
  * Declaring as unsigned int to inform compiler that this symbol is constant and defined at link time.
@@ -93,10 +96,20 @@ __attribute__((section(".interrupt_vector_table"))) const function__void_f inter
     lpc_peripheral__interrupt_dispatcher, // 51 UART 4
     lpc_peripheral__interrupt_dispatcher, // 52 SSP 2
     lpc_peripheral__interrupt_dispatcher, // 53 LCD
+#ifndef LAB_03_P0
     lpc_peripheral__interrupt_dispatcher, // 54 GPIO Interrupt
     lpc_peripheral__interrupt_dispatcher, // 55 PWM 0
     lpc_peripheral__interrupt_dispatcher, // 56 EEPROM
 };
+#endif
+#ifdef LAB_03_P0
+//    lpc_peripheral__interrupt_dispatcher, // 54 GPIO Interrupt
+gpio_interrupt,                           // Lab_3.0
+    lpc_peripheral__interrupt_dispatcher, // 55 PWM 0
+    lpc_peripheral__interrupt_dispatcher, // 56 EEPROM
+}
+;
+#endif
 
 static void halt(void) {
   // This statement resolves compiler warning: variable define but not used

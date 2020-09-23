@@ -1,15 +1,36 @@
 #include "FreeRTOS.h"
 #include "board_io.h"
 #include "common_macros.h"
-#include "task.h"
-#include <stdio.h>
-//#include "gpio.h"
+#include "gpio.h"
 #include "periodic_scheduler.h"
 #include "sj2_cli.h"
+#include "task.h"
+#include <stdio.h>
 
-#define LAB_02_GPIO
+#define LAB_03_INTERRUPT
+//#define LAB_03_P0
+//#define LAB_03_P1
+#define LAB_03_P2
+//#define LAB_02_GPIO
 //#define LAB_01_TASK
 //#define LAB_DEFAULT
+
+#ifdef LAB_03_INTERRUPT
+#include "delay.h"
+
+#ifdef LAB_03_P2
+#include "gpio_isr.h"
+#endif
+
+#if defined(LAB_03_P1) || defined(LAB_03_P2)
+#include "lpc_peripherals.h"
+#include "semphr.h"
+void gpio_interrupt(void);
+void sleep_on_sem_task(void *p);
+static SemaphoreHandle_t switch_pressed_signal;
+#endif
+
+#endif
 
 #ifdef LAB_02_GPIO
 #include "gpio_lab.h"
@@ -35,6 +56,44 @@ static void uart_task(void *params);
 
 int main(void) {
   puts("Starting RTOS");
+
+#ifdef LAB_03_INTERRUPT
+
+#ifdef LAB_03_P2
+  switch_pressed_signal = xSemaphoreCreateBinary();
+
+  LPC_GPIO0->DIR &= ~(1 << 30);        // Sw2 as input
+  LPC_GPIOINT->IO0IntEnF |= (1 << 30); // Sw2 interrupt enabled on falling edge
+  NVIC_EnableIRQ(GPIO_IRQn);
+  xTaskCreate(sleep_on_sem_task, "sem", (512U * 4) / sizeof(void *), NULL, PRIORITY_LOW, NULL);
+  gpio0__attach_interrupt(30, GPIO_INTR__FALLING_EDGE, gpio_interrupt);
+  lpc_peripheral__enable_interrupt(LPC_PERIPHERAL__GPIO, gpio__interrupt_dispatcher, "gpio_int");
+#endif
+
+#ifdef LAB_03_P1
+  switch_pressed_signal = xSemaphoreCreateBinary();
+  LPC_GPIO0->DIR &= ~(1 << 30);        // Sw2 as input
+  LPC_GPIOINT->IO0IntEnF |= (1 << 30); // Sw2 interrupt enabled on falling edge
+  lpc_peripheral__enable_interrupt(LPC_PERIPHERAL__GPIO, gpio_interrupt, "gpio_int");
+  NVIC_EnableIRQ(GPIO_IRQn); // GPIO interrupt enable
+  xTaskCreate(sleep_on_sem_task, "sem", (512U * 4) / sizeof(void *), NULL, PRIORITY_LOW, NULL);
+#endif
+
+#ifdef LAB_03_P0
+  LPC_GPIO1->DIR |= (1 << 26);         // LED 1 as output
+  LPC_GPIO2->DIR |= (1 << 3);          // LED 0 as output
+  LPC_GPIO0->DIR &= ~(1 << 30);        // Sw2 as input
+  LPC_GPIOINT->IO0IntEnF |= (1 << 30); // Sw2 interrupt enabled on falling edge
+  NVIC_EnableIRQ(GPIO_IRQn);           // GPIO interrupt enabled
+  while (1) {
+    delay__ms(100);
+    LPC_GPIO2->SET = (1 << 3); // LED 0 off
+    delay__ms(100);
+    LPC_GPIO2->CLR = (1 << 3); // LED 0 on
+  }
+#endif
+
+#endif // Assignment 03
 
 #ifdef LAB_02_GPIO
   switch_press_indication = xSemaphoreCreateBinary();
@@ -236,5 +295,52 @@ void led_task(void *task_parameter) {
     vTaskDelay(100);
   }
 }
+
+#endif
+
+#ifdef LAB_03_INTERRUPT
+
+#ifdef LAB_03_P2
+void gpio_interrupt(void) {
+  LPC_GPIOINT->IO0IntClr |= (1 << 30);
+  fprintf(stderr, "ISR Entry__P_02");
+  if (!xSemaphoreGiveFromISR(switch_pressed_signal, NULL))
+    fprintf(stderr, "Still on semaphore..");
+}
+void sleep_on_sem_task(void *p) {
+  static gpio_s led0;
+  led0 = board_io__get_led0();
+
+  while (1) {
+    gpio__toggle(led0);
+    vTaskDelay(100);
+  }
+}
+#endif
+
+#ifdef LAB_03_P1
+void sleep_on_sem_task(void *p) {
+  static gpio_s led0;
+  led0 = board_io__get_led0();
+
+  while (1) {
+    gpio__toggle(led0);
+    vTaskDelay(100);
+  }
+}
+void gpio_interrupt(void) {
+  fprintf(stderr, "ISR Entry");
+  xSemaphoreGiveFromISR(switch_pressed_signal, NULL);
+  LPC_GPIOINT->IO0IntClr |= (1 << 30); // Sw2 interrupt cleared
+}
+#endif
+
+#ifdef LAB_03_P0
+void gpio_interrupt(void) {
+  LPC_GPIOINT->IO0IntClr |= (1 << 30);      // Sw2 interrupt cleared
+  fprintf(stderr, "Interrupt occured..\n"); // telemetry output
+  LPC_GPIO1->PIN ^= (1 << 26);              // LED 1 toggle
+}
+#endif
 
 #endif
