@@ -4,6 +4,10 @@
 #include "lpc40xx.h"
 #include "lpc_peripherals.h"
 
+#ifdef LAB_04_P0
+#include "stdio.h"
+#endif
+
 void pwm1__init_single_edge(uint32_t frequency_in_hertz) {
   const uint32_t pwm_channel_output_enable_mask = 0x3F;
   const uint32_t default_frequency_in_hertz = 50;
@@ -52,6 +56,15 @@ void pwm1__set_duty_cycle(pwm1_channel_e pwm1_channel, float duty_cycle_in_perce
   default:
     break;
   }
+
+//____________________
+// Assignment_04 Part 0
+//____________________
+#ifdef LAB_04_P0
+  const uint32_t mr1_reg_val = LPC_PWM1->MR1;
+  fprintf(stderr, "MR0 : %ld, MR1 : %ld\n", mr0_reg_val, mr1_reg_val);
+#endif
+  //
 
   LPC_PWM1->LER |= (1 << (pwm1_channel + 1)); ///< Enable Latch Register
 }

@@ -51,3 +51,20 @@ uint16_t adc__get_adc_value(adc_channel_e channel_num) {
 
   return result;
 }
+
+//____________________
+// For Assignment_04 - ADC_PWM
+//____________________
+
+void adc__enable_burst_mode(void) {
+  LPC_ADC->CR &= ~(0b111 << 24); // bits 26:24 set to 0 - No start bits for burst mode
+  LPC_ADC->CR |= (1 << 16);      // set burst mode bit to 1
+}
+
+uint16_t adc__get_channel_reading_with_burst_mode(uint8_t channel_number) {
+  LPC_ADC->CR &= ~(0xff);                        // Clearing 7:0 select adc channel bits
+  LPC_ADC->CR |= (1 << 2);                       // Setting adc channel 2
+  uint32_t result = LPC_ADC->DR[ADC__CHANNEL_2]; // Reading Data register of ADC_C2
+  result = (result >> 4) & 0x0fff;               // Masking unwanted bits
+  return result;
+}
