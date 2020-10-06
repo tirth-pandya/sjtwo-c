@@ -9,6 +9,110 @@
 #include "periodic_scheduler.h"
 #include "sj2_cli.h"
 
+// Includes for Assignment 05 - SPI
+#include "lpc_peripherals.h"
+#include "semphr.h"
+#include "ssp_lab.h"
+//
+
+#if defined(LAB_05_P1) || defined(LAB_05_P2) || defined(LAB_05_P3)
+typedef struct {
+  uint8_t manufacturer_id;
+  uint8_t device_id_1;
+  uint8_t device_id_2;
+  uint8_t extended_device_id;
+} adesto_flash_id_s;
+
+adesto_flash_id_s adesto_read_signature(void);
+#endif
+
+#ifdef LAB_05_P2
+SemaphoreHandle_t spi_bus_mutex;
+#endif
+
+//______________
+// TASK for PART 02 HERE:
+//______________
+#ifdef LAB_05_P2
+void spi_id_verification_task(void *p) {
+  while (1) {
+    if (xSemaphoreTake(spi_bus_mutex, 1000)) {
+      const adesto_flash_id_s id = adesto_read_signature();
+
+      // When we read a manufacturer ID we do not expect, we will kill this task
+      if (id.manufacturer_id != 0x1F) {
+        fprintf(stderr, "Manufacturer ID read failure\n");
+        vTaskSuspend(NULL); // Kill this task
+      }
+      xSemaphoreGive(spi_bus_mutex);
+      printf("'Semaphore' Adesto man_id:%x\tid_1:%x\t\tid_2:%x\t\textended_id:%x\n", id.manufacturer_id, id.device_id_1,
+             id.device_id_2, id.extended_device_id);
+      vTaskDelay(100);
+    }
+  }
+}
+#endif
+//______________
+
+//______________
+// TASK for PART 01 HERE:
+//______________
+#ifdef LAB_05_P1
+void spi_task(void *p) {
+  const uint32_t spi_clock_mhz = 24;
+  ssp__init(spi_clock_mhz);
+
+  while (1) {
+    adesto_flash_id_s id = adesto_read_signature();
+    printf("Adesto man_id:%x\tid_1:%x\t\tid_2:%x\t\textended_id:%x\n", id.manufacturer_id, id.device_id_1,
+           id.device_id_2, id.extended_device_id);
+    vTaskDelay(500);
+  }
+}
+#endif
+//______________
+
+int main(void) {
+
+  // SPI Initialization
+  const uint32_t spi_clock_mhz = 12;
+  ssp__init(spi_clock_mhz);
+  //
+
+#ifdef LAB_05_P2
+  spi_bus_mutex = xSemaphoreCreateMutex();
+
+  xTaskCreate(spi_id_verification_task, "spi_id_1", 2048 / sizeof(void *), NULL, PRIORITY_LOW, NULL);
+  xTaskCreate(spi_id_verification_task, "spi_id_2", 2048 / sizeof(void *), NULL, PRIORITY_LOW, NULL);
+#endif
+
+#ifdef LAB_05_P1
+  xTaskCreate(spi_task, "spi", 2048 / sizeof(void *), NULL, PRIORITY_LOW, NULL);
+#endif
+
+  vTaskStartScheduler();
+  return 0;
+}
+
+#if defined(LAB_05_P1) || defined(LAB_05_P2) || defined(LAB_05_P3)
+adesto_flash_id_s adesto_read_signature(void) {
+  adesto_flash_id_s data = {0};
+  const uint8_t manufacturer_id_opcode = 0x9f;
+  const uint8_t dummy_byte_to_read_values = 0xaa;
+  adesto_cs();
+  {
+    ssp__exchange_byte(manufacturer_id_opcode);
+    data.manufacturer_id = ssp__exchange_byte(dummy_byte_to_read_values);
+    data.device_id_1 = ssp__exchange_byte(dummy_byte_to_read_values);
+    data.device_id_2 = ssp__exchange_byte(dummy_byte_to_read_values);
+    data.extended_device_id = ssp__exchange_byte(dummy_byte_to_read_values);
+  }
+  adesto_ds();
+  return data;
+}
+#endif
+
+#if (0) // Default main.c file
 static void create_blinky_tasks(void);
 static void create_uart_task(void);
 static void blink_task(void *params);
@@ -98,3 +202,4 @@ static void uart_task(void *params) {
     printf(" %lu ticks\n\n", (xTaskGetTickCount() - ticks));
   }
 }
+#endif
