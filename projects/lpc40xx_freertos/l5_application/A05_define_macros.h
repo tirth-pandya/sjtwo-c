@@ -9,7 +9,7 @@
 
 //#define LAB_05_P0       //Lab 5 - Part 0 : "ssp_lab.h" and "ssp_lab.c" files
 //#define LAB_05_P1 // Lab 5 - Part 1 : Flash interface
-#define LAB_05_P2 // Lab 5 - Part 2 : Mutex implementation
-//#define LAB_05_P3       //Lab 5 - Part 3 : Extra Credit -> page read and write
+//#define LAB_05_P2 // Lab 5 - Part 2 : Mutex implementation
+#define LAB_05_P3 // Lab 5 - Part 3 : Extra Credit -> page read and write
 
 #endif

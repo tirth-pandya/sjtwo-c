@@ -26,14 +26,49 @@ typedef struct {
 adesto_flash_id_s adesto_read_signature(void);
 #endif
 
-#ifdef LAB_05_P2
+//______________
+// TASK for PART 03 HERE:
+//______________
+#ifdef LAB_05_P3
 SemaphoreHandle_t spi_bus_mutex;
+
+void spi_erase_and_write_task(void *p) {
+  uint32_t block_address = 0x000000;
+  uint32_t page_address = 0x000001;
+  uint8_t page_data_to_write = 0x77;
+  while (1) {
+    if (xSemaphoreTake(spi_bus_mutex, 1000)) {
+      adesto_block_erase_64kb(block_address);
+      adesto_page_program(page_address, page_data_to_write);
+      xSemaphoreGive(spi_bus_mutex);
+    }
+    printf("\nErased => Block : 0x%lx\n", block_address);
+    printf("Write =>\tPage address : 0x%lx\t Data : 0x%x\n", page_address, page_data_to_write);
+    vTaskDelay(500);
+  }
+}
+
+void spi_read_task(void *p) {
+  uint32_t page_address = 0x000001;
+  uint8_t page_data_retrieved = 0;
+  while (1) {
+    if (xSemaphoreTake(spi_bus_mutex, 1000)) {
+      page_data_retrieved = adesto_page_read(page_address);
+      xSemaphoreGive(spi_bus_mutex);
+    }
+    printf("Read =>\t\tPage address : 0x%lx\t Data : 0x%x\n", page_address, page_data_retrieved);
+    vTaskDelay(500);
+  }
+}
 #endif
+//______________
 
 //______________
 // TASK for PART 02 HERE:
 //______________
 #ifdef LAB_05_P2
+SemaphoreHandle_t spi_bus_mutex;
+
 void spi_id_verification_task(void *p) {
   while (1) {
     if (xSemaphoreTake(spi_bus_mutex, 1000)) {
@@ -72,12 +107,19 @@ void spi_task(void *p) {
 #endif
 //______________
 
+#include "delay.h"
 int main(void) {
 
   // SPI Initialization
-  const uint32_t spi_clock_mhz = 12;
+  const uint32_t spi_clock_mhz = 6;
   ssp__init(spi_clock_mhz);
   //
+
+#ifdef LAB_05_P3
+  spi_bus_mutex = xSemaphoreCreateMutex();
+  xTaskCreate(spi_erase_and_write_task, "spi_erase_write", 2048 / sizeof(void *), NULL, PRIORITY_MEDIUM, NULL);
+  xTaskCreate(spi_read_task, "spi_read", 2048 / sizeof(void *), NULL, PRIORITY_LOW, NULL);
+#endif
 
 #ifdef LAB_05_P2
   spi_bus_mutex = xSemaphoreCreateMutex();
@@ -112,6 +154,9 @@ adesto_flash_id_s adesto_read_signature(void) {
 }
 #endif
 
+//****************************
+// END OF ASSIGNMENT
+//****************************
 #if (0) // Default main.c file
 static void create_blinky_tasks(void);
 static void create_uart_task(void);
