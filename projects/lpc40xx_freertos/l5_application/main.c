@@ -107,7 +107,6 @@ void spi_task(void *p) {
 #endif
 //______________
 
-#include "delay.h"
 int main(void) {
 
   // SPI Initialization

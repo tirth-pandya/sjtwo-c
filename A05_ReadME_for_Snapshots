@@ -1,0 +1,13 @@
+The details of the snapshots of telemetry and logic analyzer outputs:
+
+Telemetry Snapshots
+1)A05_P1_telemetry.png				:	Manufacture ID of flash chip
+2)ID_Read_Failure				:	Manufacture ID Read Failure because of two tasks trying to access SPI
+3)A05_P2_telemetry.png				:	Manufacture ID Read with Mutex Semaphore
+4)A05_P3_telemetry.png				:	Erase block 0, Write '0x77' to page '0x000001', Read page '0x000001'
+
+Logic Analyzer Snapshots
+5)LA01_Erase_Block_and_Status_Read		:	OpCode '0x06' for WEL, OpCode '0xDB' for Block Erase (64kB) is sent and OpCode '0x05' for status register read
+6)LA02_Status_Read_Poll_Until_Value_Is_Zero	:	Polling until Status Register Value is 0
+7)LA03_Write_Data_To_Page_Address		:	OpCode '0x06' for WEL, OpCode '0x02' for Page Write, Page Address '0x000001', Data to Write '0x77'
+8)LA04_Read_Page_Data_From_Page_Address	:	OpCode '0x03' for READ, Page Address '0x000001', Data from page '0x77' 
