@@ -9,6 +9,66 @@
 #include "periodic_scheduler.h"
 #include "sj2_cli.h"
 
+#include "uart_lab.h"
+
+void uart_read_task(void *p) {
+  //  char data_rx=0;
+  while (1) {
+    char data_rx = 0;
+    while (uart_lab__get_char_from_queue(&data_rx, 100)) {
+      fprintf(stderr, "Rx Data : %x\n", data_rx);
+    }
+    //    uart_lab__polled_get(UART_3, &data_rx);
+    vTaskDelay(50);
+    //    printf("Rx Data : %d\n", data_rx);
+  }
+}
+
+void uart_write_task(void *p) {
+  char data_tx = 0;
+  while (1) {
+    while (!(uart_lab__polled_put(UART_3, data_tx)))
+      ;
+    fprintf(stderr, "Tx Data : %x\n", data_tx);
+
+    //    uart_lab__polled_put(UART_3, data_tx);
+    vTaskDelay(500);
+    //    printf("Data sent : %d \n", data_tx);
+    data_tx++;
+  }
+}
+#if (0)
+void uart_read_task(void *p) {
+  char data_rx;
+  while (1) {
+    uart_lab__polled_get(UART_3, &data_rx);
+    vTaskDelay(500);
+    printf("Rx Data : %d\n", data_rx);
+  }
+}
+
+void uart_write_task(void *p) {
+  char data_tx = 0;
+  while (1) {
+    uart_lab__polled_put(UART_3, data_tx);
+    vTaskDelay(500);
+    printf("Data sent : %d \n", data_tx);
+    data_tx++;
+  }
+}
+#endif
+int main(void) {
+  uart_lab__init(UART_3, clock__get_peripheral_clock_hz(), 115200);
+
+  uart__enable_recieve_interrupt(UART_3);
+
+  xTaskCreate(uart_read_task, "uart_read", 2048 / sizeof(void *), NULL, PRIORITY_LOW, NULL);
+  xTaskCreate(uart_write_task, "uart_write", 2048 / sizeof(void *), NULL, PRIORITY_LOW, NULL);
+
+  vTaskStartScheduler();
+  return 0;
+}
+#if (0)
 static void create_blinky_tasks(void);
 static void create_uart_task(void);
 static void blink_task(void *params);
@@ -98,3 +158,4 @@ static void uart_task(void *params) {
     printf(" %lu ticks\n\n", (xTaskGetTickCount() - ticks));
   }
 }
+#endif
