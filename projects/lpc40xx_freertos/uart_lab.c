@@ -7,37 +7,38 @@
 #include "lpc_peripherals.h"
 #include "queue.h"
 
+static LPC_UART_TypeDef *LPC_UART_x = LPC_UART2; // Initialized to avoid warning
+
+#if defined(LAB_06_P2) || defined(LAB_06_P3)
 static QueueHandle_t uart_rx_queue;
 
-static void rx_interrupt(void) {
-  fprintf(stderr, "I'm here\n");
+static void uart_ch3_rx_interrupt(void) {
   uint8_t iir_int_stat_bit = (1 << 0);
   uint8_t iir_int_id_bit_mask = (0b111 << 1);
-  uint8_t rx_interrupt_id;
+  uint8_t rx_interrupt_id = 0;
   uint8_t lsr_rdr_bit = (1 << 0);
 
   if (!(LPC_UART3->IIR & iir_int_stat_bit)) {
     rx_interrupt_id = (LPC_UART3->IIR & iir_int_id_bit_mask);
     rx_interrupt_id = (rx_interrupt_id >> 1);
-    if (rx_interrupt_id == 3 && (LPC_UART3->LSR & lsr_rdr_bit)) {
+    if (rx_interrupt_id == 2 && (LPC_UART3->LSR & lsr_rdr_bit)) {
       const char byte = LPC_UART3->RBR;
       xQueueSendFromISR(uart_rx_queue, &byte, NULL);
     }
-    fprintf(stderr, "UART3 Interrpt Occured\n");
   } else {
-    fprintf(stderr, "UART Interrupt, Unknown Channel\n");
+    fprintf(stderr, "UART Interrupt, Unknown Channel Configuration : %x\n", rx_interrupt_id);
   }
 }
 
 void uart__enable_recieve_interrupt(uart_number_e uart_number) {
-  LPC_UART_TypeDef *lpc_uart_x = LPC_UART3;
+  LPC_UART_TypeDef *lpc_uart_x;
   uint8_t ier_rda_int_enable_bit = (1 << 0);
-  //   if (uart_number == UART_2)
-  //     lpc_uart_x = LPC_UART2;
-  //   else
-  //     lpc_uart_x = LPC_UART3;
+  if (uart_number == UART_2)
+    lpc_uart_x = LPC_UART2;
+  else
+    lpc_uart_x = LPC_UART3;
 
-  lpc_peripheral__enable_interrupt(LPC_PERIPHERAL__UART3, rx_interrupt, "UART Interrupt");
+  lpc_peripheral__enable_interrupt(LPC_PERIPHERAL__UART3, uart_ch3_rx_interrupt, "UART Interrupt");
   lpc_uart_x->IER |= ier_rda_int_enable_bit;
   uart_rx_queue = xQueueCreate(10, sizeof(char));
   fprintf(stderr, "Created Queue\n");
@@ -46,9 +47,11 @@ void uart__enable_recieve_interrupt(uart_number_e uart_number) {
 bool uart_lab__get_char_from_queue(char *input_byte, uint32_t timeout) {
   return xQueueReceive(uart_rx_queue, input_byte, timeout);
 }
+#endif
 
-static LPC_UART_TypeDef *LPC_UART_x = LPC_UART2; // Initialized to avoid warning
-
+//_______________________________________
+// The functions below are basic UART functions and used in all the parts of this assignment
+//_______________________________________
 void uart_lab__init(uart_number_e uart, uint32_t peripheral_clock, uint32_t baud_rate) {
 
   const uint32_t uart_2_power_bit = (1 << 24);
@@ -64,17 +67,15 @@ void uart_lab__init(uart_number_e uart, uint32_t peripheral_clock, uint32_t baud
   case UART_2:
     LPC_UART_x = LPC_UART2;
     LPC_SC->PCONP |= uart_2_power_bit;
-    gpio__construct_with_function(GPIO__PORT_4, 28, GPIO__FUNCTION_2);
-    gpio__construct_with_function(GPIO__PORT_4, 29, GPIO__FUNCTION_2);
-
+    gpio__construct_with_function(GPIO__PORT_2, 8, GPIO__FUNCTION_2);
+    gpio__construct_with_function(GPIO__PORT_2, 9, GPIO__FUNCTION_2);
     break;
 
   case UART_3:
     LPC_UART_x = LPC_UART3;
     LPC_SC->PCONP |= uart_3_power_bit;
-    gpio__construct_with_function(GPIO__PORT_2, 8, GPIO__FUNCTION_2);
-    gpio__construct_with_function(GPIO__PORT_2, 9, GPIO__FUNCTION_2);
-
+    gpio__construct_with_function(GPIO__PORT_4, 28, GPIO__FUNCTION_2);
+    gpio__construct_with_function(GPIO__PORT_4, 29, GPIO__FUNCTION_2);
     break;
 
   default:

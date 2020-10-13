@@ -12,5 +12,7 @@ void uart_lab__init(uart_number_e uart, uint32_t peripheral_clock, uint32_t baud
 bool uart_lab__polled_get(uart_number_e uart, char *input_byte);
 bool uart_lab__polled_put(uart_number_e uart, char output_byte);
 
+#if defined(LAB_06_P2) || defined(LAB_06_P3)
 void uart__enable_recieve_interrupt(uart_number_e uart_number);
 bool uart_lab__get_char_from_queue(char *input_byte, uint32_t timeout);
+#endif

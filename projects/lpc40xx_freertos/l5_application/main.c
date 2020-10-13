@@ -10,17 +10,63 @@
 #include "sj2_cli.h"
 
 #include "uart_lab.h"
+#include <stdlib.h>
+#include <string.h>
+//___________________________
+// TASKS for PART 3 HERE:
+//___________________________
+#ifdef LAB_06_P3
+void sender_board_task(void *p) {
+  char number_as_string[16] = {0};
 
+  while (1) {
+    const int number = rand();
+    sprintf(number_as_string, "%i", number);
+
+    for (int i = 0; i <= strlen(number_as_string); i++) {
+      uart_lab__polled_put(UART_3, number_as_string[i]);
+      printf("Sent: %i over UART to other board\n", number);
+      vTaskDelay(3000);
+    }
+  }
+}
+
+void receiver_board_task(void *p) {
+  char number_as_string[16] = {0};
+  int counter = 0;
+
+  while (true) {
+    char byte = 0;
+    uart_lab__get_char_from_queue(&byte, portMAX_DELAY);
+    printf("Received : %c\n", byte);
+
+    if ('\0' == byte) {
+      number_as_string[counter] = '\0';
+      counter = 0;
+      printf("Received this number from the other board : %s\n", number_as_string);
+    } else {
+      number_as_string[counter] = byte;
+      counter++;
+      if (counter == 16)
+        number_as_string[counter] = '\0';
+      break;
+    }
+  }
+}
+#endif
+//___________________________
+
+//___________________________
+// TASKS for PART 2 HERE:
+//___________________________
+#ifdef LAB_06_P2
 void uart_read_task(void *p) {
-  //  char data_rx=0;
   while (1) {
     char data_rx = 0;
     while (uart_lab__get_char_from_queue(&data_rx, 100)) {
       fprintf(stderr, "Rx Data : %x\n", data_rx);
     }
-    //    uart_lab__polled_get(UART_3, &data_rx);
-    vTaskDelay(50);
-    //    printf("Rx Data : %d\n", data_rx);
+    vTaskDelay(500);
   }
 }
 
@@ -30,14 +76,17 @@ void uart_write_task(void *p) {
     while (!(uart_lab__polled_put(UART_3, data_tx)))
       ;
     fprintf(stderr, "Tx Data : %x\n", data_tx);
-
-    //    uart_lab__polled_put(UART_3, data_tx);
     vTaskDelay(500);
-    //    printf("Data sent : %d \n", data_tx);
     data_tx++;
   }
 }
-#if (0)
+#endif
+//___________________________
+
+//___________________________
+// TASKS for Part 1 HERE:
+//___________________________
+#ifdef LAB_06_P1
 void uart_read_task(void *p) {
   char data_rx;
   while (1) {
@@ -57,14 +106,22 @@ void uart_write_task(void *p) {
   }
 }
 #endif
+//___________________________
+
 int main(void) {
   uart_lab__init(UART_3, clock__get_peripheral_clock_hz(), 115200);
 
-  uart__enable_recieve_interrupt(UART_3);
+#ifdef LAB_06_P3
 
+#endif
+#ifdef LAB_06_P2
+  uart__enable_recieve_interrupt(UART_3);
+#endif
+
+#if defined(LAB_06_P1) || defined(LAB_06_P2)
   xTaskCreate(uart_read_task, "uart_read", 2048 / sizeof(void *), NULL, PRIORITY_LOW, NULL);
   xTaskCreate(uart_write_task, "uart_write", 2048 / sizeof(void *), NULL, PRIORITY_LOW, NULL);
-
+#endif
   vTaskStartScheduler();
   return 0;
 }
