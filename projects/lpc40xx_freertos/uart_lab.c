@@ -12,6 +12,23 @@ static LPC_UART_TypeDef *LPC_UART_x = LPC_UART2; // Initialized to avoid warning
 #if defined(LAB_06_P2) || defined(LAB_06_P3)
 static QueueHandle_t uart_rx_queue;
 
+static void uart_ch2_rx_interrupt(void) {
+  uint8_t iir_int_stat_bit = (1 << 0);
+  uint8_t iir_int_id_bit_mask = (0b111 << 1);
+  uint8_t rx_interrupt_id = 0;
+  uint8_t lsr_rdr_bit = (1 << 0);
+
+  if (!(LPC_UART2->IIR & iir_int_stat_bit)) {
+    rx_interrupt_id = (LPC_UART2->IIR & iir_int_id_bit_mask);
+    rx_interrupt_id = (rx_interrupt_id >> 1);
+    if (rx_interrupt_id == 2 && (LPC_UART2->LSR & lsr_rdr_bit)) {
+      const char byte = LPC_UART2->RBR;
+      xQueueSendFromISR(uart_rx_queue, &byte, NULL);
+    }
+  } else {
+    fprintf(stderr, "UART Interrupt, Unknown Channel Configuration : %x\n", rx_interrupt_id);
+  }
+}
 static void uart_ch3_rx_interrupt(void) {
   uint8_t iir_int_stat_bit = (1 << 0);
   uint8_t iir_int_id_bit_mask = (0b111 << 1);
@@ -33,12 +50,13 @@ static void uart_ch3_rx_interrupt(void) {
 void uart__enable_recieve_interrupt(uart_number_e uart_number) {
   LPC_UART_TypeDef *lpc_uart_x;
   uint8_t ier_rda_int_enable_bit = (1 << 0);
-  if (uart_number == UART_2)
+  if (uart_number == UART_2) {
     lpc_uart_x = LPC_UART2;
-  else
+    lpc_peripheral__enable_interrupt(LPC_PERIPHERAL__UART2, uart_ch2_rx_interrupt, "UART Interrupt");
+  } else {
     lpc_uart_x = LPC_UART3;
-
-  lpc_peripheral__enable_interrupt(LPC_PERIPHERAL__UART3, uart_ch3_rx_interrupt, "UART Interrupt");
+    lpc_peripheral__enable_interrupt(LPC_PERIPHERAL__UART3, uart_ch3_rx_interrupt, "UART Interrupt");
+  }
   lpc_uart_x->IER |= ier_rda_int_enable_bit;
   uart_rx_queue = xQueueCreate(10, sizeof(char));
   fprintf(stderr, "Created Queue\n");

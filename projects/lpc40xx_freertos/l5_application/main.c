@@ -12,10 +12,21 @@
 #include "uart_lab.h"
 #include <stdlib.h>
 #include <string.h>
+
+// Select the UART Channel HERE:
+//#define UART_CH UART_3
+#define UART_CH UART_2
+
+
 //___________________________
 // TASKS for PART 3 HERE:
 //___________________________
 #ifdef LAB_06_P3
+
+// FOR PART 3 : Select Board Config HERE:
+//#define BOARD_AS_SENDER
+#define BOARD_AS_RECEIVER
+
 void sender_board_task(void *p) {
   char number_as_string[16] = {0};
 
@@ -24,10 +35,12 @@ void sender_board_task(void *p) {
     sprintf(number_as_string, "%i", number);
 
     for (int i = 0; i <= strlen(number_as_string); i++) {
-      uart_lab__polled_put(UART_3, number_as_string[i]);
-      printf("Sent: %i over UART to other board\n", number);
-      vTaskDelay(3000);
+      uart_lab__polled_put(UART_CH, number_as_string[i]);
+      printf("Sent: %c\n", number_as_string[i]);
     }
+    printf("Sent: %i over UART to other board\n", number);
+
+    vTaskDelay(3000);
   }
 }
 
@@ -47,9 +60,6 @@ void receiver_board_task(void *p) {
     } else {
       number_as_string[counter] = byte;
       counter++;
-      if (counter == 16)
-        number_as_string[counter] = '\0';
-      break;
     }
   }
 }
@@ -64,7 +74,7 @@ void uart_read_task(void *p) {
   while (1) {
     char data_rx = 0;
     while (uart_lab__get_char_from_queue(&data_rx, 100)) {
-      fprintf(stderr, "Rx Data : %x\n", data_rx);
+      fprintf(stderr, "Interrupt => Rx Data : %x\n", data_rx);
     }
     vTaskDelay(500);
   }
@@ -73,7 +83,7 @@ void uart_read_task(void *p) {
 void uart_write_task(void *p) {
   char data_tx = 0;
   while (1) {
-    while (!(uart_lab__polled_put(UART_3, data_tx)))
+    while (!(uart_lab__polled_put(UART_CH, data_tx)))
       ;
     fprintf(stderr, "Tx Data : %x\n", data_tx);
     vTaskDelay(500);
@@ -90,7 +100,7 @@ void uart_write_task(void *p) {
 void uart_read_task(void *p) {
   char data_rx;
   while (1) {
-    uart_lab__polled_get(UART_3, &data_rx);
+    uart_lab__polled_get(UART_CH, &data_rx);
     vTaskDelay(500);
     printf("Rx Data : %d\n", data_rx);
   }
@@ -99,7 +109,7 @@ void uart_read_task(void *p) {
 void uart_write_task(void *p) {
   char data_tx = 0;
   while (1) {
-    uart_lab__polled_put(UART_3, data_tx);
+    uart_lab__polled_put(UART_CH, data_tx);
     vTaskDelay(500);
     printf("Data sent : %d \n", data_tx);
     data_tx++;
@@ -109,13 +119,22 @@ void uart_write_task(void *p) {
 //___________________________
 
 int main(void) {
-  uart_lab__init(UART_3, clock__get_peripheral_clock_hz(), 115200);
+  uart_lab__init(UART_CH, clock__get_peripheral_clock_hz(), 115200);
 
 #ifdef LAB_06_P3
 
+#ifdef BOARD_AS_SENDER
+  xTaskCreate(sender_board_task, "send_data", 2048 / sizeof(void *), NULL, PRIORITY_LOW, NULL);
 #endif
+#ifdef BOARD_AS_RECEIVER
+  uart__enable_recieve_interrupt(UART_CH);
+  xTaskCreate(receiver_board_task, "receive_data", 2048 / sizeof(void *), NULL, PRIORITY_LOW, NULL);
+#endif
+
+#endif
+
 #ifdef LAB_06_P2
-  uart__enable_recieve_interrupt(UART_3);
+  uart__enable_recieve_interrupt(UART_CH);
 #endif
 
 #if defined(LAB_06_P1) || defined(LAB_06_P2)

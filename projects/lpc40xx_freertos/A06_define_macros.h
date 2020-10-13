@@ -10,7 +10,7 @@
 // Parts :
 //#define LAB_06_P0 // UART Driver Configurations
 //#define LAB_06_P1 // UART Loopback Test
-//#define LAB_06_P2 // UART Recieve with Interrupts
-#define LAB_06_P3 // Extra Credit : Interface Two SJ2 boards with UART
+#define LAB_06_P2 // UART Recieve with Interrupts
+//#define LAB_06_P3 // Extra Credit : Interface Two SJ2 boards with UART
 
 #endif
