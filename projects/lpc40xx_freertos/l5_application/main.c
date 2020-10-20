@@ -8,6 +8,29 @@
 #include "periodic_scheduler.h"
 #include "sj2_cli.h"
 
+//EXTRA CREDIT PART OF A07
+
+#ifdef A07_Producer_Consumer
+static void led0_task(void *p) {
+  const gpio_s led0 = board_io__get_led0();
+  gpio__set_as_output(led0);
+  while (1) {
+    gpio__toggle(led0);
+    printf("LED : 0\n");
+    vTaskDelay(1500);
+  }
+}
+static void led1_task(void *p) {
+  const gpio_s led1 = board_io__get_led1();
+  gpio__set_as_output(led1);
+  while (1) {
+    gpio__toggle(led1);
+    printf("LED : 1\n");
+    vTaskDelay(1500);
+  }
+}
+#endif
+
 // 'static' to make these functions 'private' to this file
 static void create_blinky_tasks(void);
 static void create_uart_task(void);
@@ -15,7 +38,7 @@ static void blink_task(void *params);
 static void uart_task(void *params);
 
 int main(void) {
-  create_blinky_tasks();
+  //  create_blinky_tasks();
   create_uart_task();
 
   // If you have the ESP32 wifi module soldered on the board, you can try uncommenting this code
@@ -24,6 +47,10 @@ int main(void) {
   // xTaskCreate(esp32_tcp_hello_world_task, "uart3", 1000, NULL, PRIORITY_LOW, NULL); // Include esp32_task.h
 
   puts("Starting RTOS");
+#ifdef A07_Producer_Consumer
+  xTaskCreate(led0_task, "led0", 2048 / sizeof(void *), NULL, PRIORITY_LOW, NULL);
+  xTaskCreate(led1_task, "led1", 2048 / sizeof(void *), NULL, PRIORITY_LOW, NULL);
+#endif
   vTaskStartScheduler(); // This function never returns unless RTOS scheduler runs out of memory and fails
 
   return 0;

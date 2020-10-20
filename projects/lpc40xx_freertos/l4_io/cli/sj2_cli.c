@@ -37,7 +37,17 @@ void sj2_cli__init(void) {
                                              "Outputs list of RTOS tasks, CPU and stack usage.\n"
                                              "tasklist <time>' will display CPU utilization within this time window.",
                                          .app_cli_handler = cli__task_list};
-
+//________________________________
+// A07_Extra_Credit_Part
+//________________________________
+#ifdef A07_Producer_Consumer
+  static app_cli__command_s task_control = {.command_name = "taskcontrol",
+                                            .help_message_for_command = "Suspend or resume the task :\n"
+                                                                        "taskcontrol <suspend/resume> <taskhandle>",
+                                            .app_cli_handler = cli__task_control};
+  app_cli__add_command_handler(&sj2_cli_struct, &task_control);
+#endif
+  //________________________________
   // Add your CLI commands in descending sorted order to make them appear in sorted order
   app_cli__add_command_handler(&sj2_cli_struct, &uart3_transmit);
   app_cli__add_command_handler(&sj2_cli_struct, &task_list);
