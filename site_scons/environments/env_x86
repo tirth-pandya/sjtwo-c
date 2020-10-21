@@ -18,8 +18,8 @@ env_x86 = Environment(
     ASFLAGS=[],
     LINKFLAGS=[],
     CPPPATH=[],
-    CPPDEFINES=[],
-    LIBS=[],
+    CPPDEFINES=["_DEFAULT_SOURCE"],
+    LIBS=["pthread"],
     LIBPATH=[],
 )
 
